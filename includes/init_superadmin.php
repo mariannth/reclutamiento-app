@@ -17,4 +17,3 @@ if ($existe->num_rows === 0) {
 } else {
     echo "El superadmin ya existe.<br>";
 }
-?>

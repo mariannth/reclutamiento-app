@@ -6,10 +6,10 @@ if (!isset($_SESSION['usuario'])) {
     exit;
 }
 
-function soloAdmin() {
+function soloAdmin()
+{
     if ($_SESSION['usuario']['rol'] !== 'admin') {
         header("Location: dashboard.php");
         exit;
     }
 }
-?>

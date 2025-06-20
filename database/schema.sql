@@ -100,3 +100,4 @@ ADD COLUMN seguimiento_actualizado_por INT NULL AFTER estado_seguimiento,
 ADD COLUMN fecha_actualizacion_seguimiento TIMESTAMP NULL DEFAULT NULL AFTER seguimiento_actualizado_por,
 ADD CONSTRAINT fk_seguimiento_usuario FOREIGN KEY (seguimiento_actualizado_por) REFERENCES usuarios(id);
 
+ALTER TABLE empresas ADD COLUMN cantidad_vacantes INT DEFAULT 0;

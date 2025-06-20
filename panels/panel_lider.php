@@ -37,7 +37,7 @@ if (!isset($_SESSION['usuario']) || $_SESSION['usuario']['rol'] !== 'lider') {
     </section>
 
     <section id="empresas" style="display: none;">
-        <iframe src="../empresas/editar_empresas_lider.php" width="100%" height="600" frameborder="0"></iframe>
+        <iframe src="../empresas/empresas_lider.php" width="100%" height="600" frameborder="0"></iframe>
     </section>
 </div>
 
