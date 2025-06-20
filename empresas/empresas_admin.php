@@ -21,7 +21,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $valores[$campo] = $_POST[$campo] ?? null;
     }
 
-    $cantidad_vacantes = $_POST['cantidad_vacantes'] ?? 0;
+    $cantidad_vacantes = intval($_POST['cantidad_vacantes'] ?? 0);
+    $activo = isset($_POST['activo']) ? 1 : 0;
 
     $docs = [
         'doc_solicitud', 'doc_ine', 'doc_acta', 'doc_curp', 'doc_nss', 'doc_rfc',
@@ -32,36 +33,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $valores[$doc] = isset($_POST[$doc]) ? 1 : 0;
     }
 
-    $stmt = $conexion->prepare("
+    $sql = "
         INSERT INTO empresas (
-            nombre, contacto, cliente, sucursal, proceso_detallado, examen_medico, 
+            nombre, contacto, cliente, sucursal, proceso_detallado, examen_medico,
             responsables_entrevista, rutas_transporte, direccion_entrevista, link_maps,
             vacante, sexo, escolaridad, edad, horarios, salario, prestaciones,
             experiencia, aspecto_fisico, requisitos_adicionales, categorias, tiempo_planta,
             banco_pago, semana_fondo, actividades, prestaciones_extra,
             doc_solicitud, doc_ine, doc_acta, doc_curp, doc_nss, doc_rfc, doc_domicilio,
-            doc_estudios, doc_retencion, cantidad_vacantes
+            doc_estudios, doc_retencion, cantidad_vacantes, activo
         ) VALUES (
-            ?,?,?,?,?,?,?,?,?,?, ?,?,?,?,?,?,?,?,?,?, ?,?,?,?,?,?,?,?,?,?,?,?
+            ?,?,?,?,?,?,?,?,?,?, ?,?,?,?,?,?,?,?,?,?, ?,?,?,?,?,?,?,?,?,?,?,?,?
         )
-    ");
+    ";
 
-    $stmt->bind_param(
-        "ssssssssssssssssssssssssssssssssi",
-        $valores['nombre'], $valores['contacto'], $valores['cliente'], $valores['sucursal'], $valores['proceso_detallado'], $valores['examen_medico'],
-        $valores['responsables_entrevista'], $valores['rutas_transporte'], $valores['direccion_entrevista'], $valores['link_maps'],
-        $valores['vacante'], $valores['sexo'], $valores['escolaridad'], $valores['edad'], $valores['horarios'], $valores['salario'], $valores['prestaciones'],
-        $valores['experiencia'], $valores['aspecto_fisico'], $valores['requisitos_adicionales'], $valores['categorias'], $valores['tiempo_planta'],
-        $valores['banco_pago'], $valores['semana_fondo'], $valores['actividades'], $valores['prestaciones_extra'],
-        $valores['doc_solicitud'], $valores['doc_ine'], $valores['doc_acta'], $valores['doc_curp'], $valores['doc_nss'], $valores['doc_rfc'], $valores['doc_domicilio'],
-        $valores['doc_estudios'], $valores['doc_retencion'], $cantidad_vacantes
-    );
+    $stmt = $conexion->prepare($sql);
+    if ($stmt) {
+        $stmt->bind_param(
+            'ssssssssssssssssssssssssssiiiiiiiiii',
+            $valores['nombre'], $valores['contacto'], $valores['cliente'], $valores['sucursal'], $valores['proceso_detallado'], $valores['examen_medico'],
+            $valores['responsables_entrevista'], $valores['rutas_transporte'], $valores['direccion_entrevista'], $valores['link_maps'],
+            $valores['vacante'], $valores['sexo'], $valores['escolaridad'], $valores['edad'], $valores['horarios'], $valores['salario'], $valores['prestaciones'],
+            $valores['experiencia'], $valores['aspecto_fisico'], $valores['requisitos_adicionales'], $valores['categorias'], $valores['tiempo_planta'],
+            $valores['banco_pago'], $valores['semana_fondo'], $valores['actividades'], $valores['prestaciones_extra'],
+            $valores['doc_solicitud'], $valores['doc_ine'], $valores['doc_acta'], $valores['doc_curp'], $valores['doc_nss'], $valores['doc_rfc'], $valores['doc_domicilio'],
+            $valores['doc_estudios'], $valores['doc_retencion'], $cantidad_vacantes, $activo
+        );
 
-    if ($stmt->execute()) {
-        header("Location: panel_admin.php?success=empresa_registrada");
-        exit();
+        if ($stmt->execute()) {
+            header("Location: ../panels/panel_admin.php?success=empresa_registrada");
+            exit();
+        } else {
+            $error = "❌ Error al registrar la empresa: " . $stmt->error;
+        }
+
+        $stmt->close();
     } else {
-        $error = "Error al registrar la empresa";
+        $error = "❌ Error en la preparación del query: " . $conexion->error;
     }
 }
 ?>
@@ -117,15 +125,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <label class='form-label'>Cantidad de Vacantes</label>
                 <input type='number' name='cantidad_vacantes' class='form-control' min='1' required>
               </div>";
+
+        echo "<div class='col-md-2 form-check mt-4'>
+                <input type='checkbox' class='form-check-input' name='activo' id='activo' checked>
+                <label class='form-check-label' for='activo'>Activa</label>
+              </div>";
         ?>
 
         <div class="col-12">
-            <label class="form-label">Documentos Requeridos</label><br>
+            <label class="form-label">📎 Documentos Requeridos</label><br>
             <?php
             $docs = [
-                'doc_solicitud' => 'Solicitud', 'doc_ine' => 'INE', 'doc_acta' => 'Acta Nacimiento',
-                'doc_curp' => 'CURP', 'doc_nss' => 'NSS', 'doc_rfc' => 'RFC',
-                'doc_domicilio' => 'Comprobante Domicilio', 'doc_estudios' => 'Certificado Estudios', 'doc_retencion' => 'Carta Retención'
+                'doc_solicitud' => 'Solicitud',
+                'doc_ine' => 'INE',
+                'doc_acta' => 'Acta Nacimiento',
+                'doc_curp' => 'CURP',
+                'doc_nss' => 'NSS',
+                'doc_rfc' => 'RFC',
+                'doc_domicilio' => 'Comprobante Domicilio',
+                'doc_estudios' => 'Certificado Estudios',
+                'doc_retencion' => 'Carta Retención'
             ];
             foreach ($docs as $name => $label) {
                 echo "<div class='form-check form-check-inline'>
@@ -140,9 +159,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <button type="submit" class="btn btn-success">Registrar Empresa</button>
             <a href="../panels/panel_admin.php" class="btn btn-secondary">Cancelar</a>
         </div>
-       
     </form>
-     <br>
-      <br>
 </body>
 </html>

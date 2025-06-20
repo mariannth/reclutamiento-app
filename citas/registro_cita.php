@@ -7,8 +7,11 @@ if (!isset($_SESSION['usuario']) || $_SESSION['usuario']['rol'] !== 'usuario') {
 }
 include '../includes/conexion.php';
 
-// Obtener empresas para el select
-$empresas = $conexion->query("SELECT id, cliente, sucursal FROM empresas ORDER BY cliente ASC");
+// Obtener ID del usuario logueado desde la sesión
+$usuario_id = $_SESSION['usuario']['id'];
+
+// Obtener empresas activas
+$empresas = $conexion->query("SELECT id, cliente, sucursal FROM empresas WHERE activo = 1 ORDER BY cliente ASC");
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $empresa_id = $_POST['empresa_id'];
@@ -25,7 +28,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $reclutador = $_POST['reclutador'];
 
     // Verificar duplicados
-    $consulta = $conexion->prepare("SELECT c.fecha, c.estado, e.cliente FROM citas c JOIN empresas e ON c.empresa_id = e.id WHERE c.nombre = ? AND c.apellido_paterno = ? AND c.apellido_materno = ? AND c.telefono = ?");
+    $consulta = $conexion->prepare("SELECT c.fecha, c.estado, e.cliente 
+                                     FROM citas c 
+                                     JOIN empresas e ON c.empresa_id = e.id 
+                                     WHERE c.nombre = ? AND c.apellido_paterno = ? 
+                                     AND c.apellido_materno = ? AND c.telefono = ?");
     $consulta->bind_param("ssss", $nombre, $apellido_paterno, $apellido_materno, $telefono);
     $consulta->execute();
     $resultado = $consulta->get_result();
@@ -45,16 +52,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $empresasTexto = implode(", ", array_unique($empresasCitadas));
         $estadosTexto = implode(", ", array_unique($estados));
 
-        echo "<script>alert('El/La candidat@ con nombre $nombre $apellido_paterno $apellido_materno y teléfono $telefono, se citó el día $fechasTexto para la/s empresa(s) $empresasTexto. Precaución, este es su estatus: $estadosTexto');</script>";
+        echo "<script>alert('El/La candidat@ con nombre $nombre $apellido_paterno $apellido_materno y teléfono $telefono, ya fue citad@ el día $fechasTexto para la(s) empresa(s) $empresasTexto. Estado(s): $estadosTexto');</script>";
     } else {
-        $insertar = $conexion->prepare("INSERT INTO citas (empresa_id, nombre, apellido_paterno, apellido_materno, edad, escolaridad, fecha, hora, telefono, ruta, coordinador, reclutador, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDIENTE')");
-        $insertar->bind_param("isssisssssss", $empresa_id, $nombre, $apellido_paterno, $apellido_materno, $edad, $escolaridad, $fecha, $hora, $telefono, $ruta, $coordinador, $reclutador);
-        $insertar->execute();
+        $insertar = $conexion->prepare("INSERT INTO citas 
+        (empresa_id, usuario_id, nombre, apellido_paterno, apellido_materno, edad, escolaridad, fecha, hora, telefono, ruta, coordinador, reclutador, estado) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDIENTE')");
 
-        echo "<script>alert('Citado correctamente, consulta tu cita en la tabla');</script>";
+        $insertar->bind_param("iisssisssssss", $empresa_id, $usuario_id, $nombre, $apellido_paterno, $apellido_materno, $edad, $escolaridad, $fecha, $hora, $telefono, $ruta, $coordinador, $reclutador);
+
+        
+        if ($insertar->execute()) {
+            echo "<script>alert('✅ Cita registrada correctamente.');</script>";
+        } else {
+            echo "<script>alert('❌ Error al registrar cita: " . $insertar->error . "');</script>";
+        }
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
